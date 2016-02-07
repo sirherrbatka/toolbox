@@ -1,0 +1,3 @@
+* TODO Add docstrings
+* Lookuptables
+** TODO Add functional style insert (creates new lookuptable)
