@@ -226,6 +226,7 @@
     (setf (va index) new-value)))
 
 
+@export
 (defun insert-into-content (vector-container new-value index)
   (declare (type vector-container vector-container)
            (type index index))
