@@ -45,19 +45,13 @@
                              new-mask
                              copy-mask)
   (declare (type list copy-mask)
-           (type (unsigned-byte 32) new-size new-mask))
+           (type index new-size new-mask))
   (make-instance 'fixed-lookuptable
-                 :replacer (let ((new-buffer (get-buffer (read-replacer factory)
-                                                         (read-container lookuptable)
-                                                         new-size)))
-                             (iterate
-                               (for (to from count) in copy-mask)
-                               (copy-with-mask new-buffer
-                                               (slot-value (read-container lookuptable)
-                                                           '%content)
-                                               (:from from :into to :times count)))
-                             (make-instance 'vector-container :content new-buffer)))
-                 :mask new-mask)
+                 :content (copy-vector-container (read-replacer factory)
+                                                 (read-container lookuptable)
+                                                 new-size
+                                                 copy-mask)
+                 :mask new-mask))
 
 
 @export

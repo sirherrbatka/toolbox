@@ -8,6 +8,7 @@
 
 @export
 (defun adjustable-vector (&rest elements)
+  "Creates and returns adjustable vector holding all elements"
   (let ((product (make-array '(0) :adjustable t :fill-pointer 0)))
     (dolist (el elements product)
       (vector-push-extend el product))))
@@ -15,15 +16,17 @@
 
 @export
 (defun choose (vector index &rest more-indexes)
+  "Returns vector containing values stored in the vector under indexes."
   (declare (type vector vector)
            (type index index))
-  (apply #'adjustable-vector
-         (mapcar (lambda (i) (aref vector i))
-                 (cons index more-indexes))))
+  (map 'vector
+       (lambda (i) (aref vector i))
+       (cons index more-indexes)))
 
 
 @export
 (defun range-sub-vector (vector start end)
+  "Returns array displaced to the vector (starting with start, ending on end)"
   (declare (type vector vector)
            (type index start)
            (type index end))
@@ -34,8 +37,9 @@
 
 @export
 (defun fill-with (vector starting count fill-with)
-  (declare (type (unsigned-byte 64) count)
-           (type (unsigned-byte 64) starting)
+  "Fills region of vector between starting and (+ starting count) with parameter passed with fill-with"
+  (declare (type index count)
+           (type index starting)
            (type vector vector))
   (iterate
     (with max = (min (+ count starting) (array-dimension vector 0)))
@@ -46,8 +50,10 @@
 
 @export
 (defun left-shift-vector (vector starting-with shift fill-with)
-  (declare (type (unsigned-byte 64) shift)
-           (type (unsigned-byte 64) starting-with)
+  "Shifts elements of the vector from 0 to starting-with by shift towards smaller index. Elements may be removed from the vector,
+   if shift would place them under negative index. Fills created gap with fill-with afterwards."
+  (declare (type index shift)
+           (type index starting-with)
            (type vector vector))
   (iterate
     (for i from 0 below starting-with)
@@ -58,6 +64,9 @@
 
 @export
 (defun right-shift-vector (vector starting-with shift fill-with)
+  "Shifts elements of the the vector for starting-with by shift toward higher index.
+   Elements may be removed from the vector if shift would place them beyond length of the vector. Adjustable vectors are not resized.
+   Fills created gap with fill-with afterwards."
   (declare (type (unsigned-byte 64) starting-with shift)
            (type vector vector))
   (let ((length (array-dimension vector 0)))
@@ -70,6 +79,7 @@
 
 @export
 (defun shift-vector-elements (vector starting-with shift fill-with)
+  "Shifts elements either left or right (depending if shift is positive or negative)."
   (if (> shift 0)
       (right-shift-vector vector starting-with shift fill-with)
       (left-shift-vector vector starting-with (abs shift) fill-with)))
@@ -77,6 +87,7 @@
 
 @export
 (defun vector-insert (element index vector)
+  "Inserts element in the adjustable vector"
   (declare (type vector vector)
            (type (integer 0) index))
   (when (> index (length vector))
@@ -90,7 +101,6 @@
   vector)
 
 
-@export
 (defun get-vector-fill-function (vector)
   (declare (type vector vector))
   (if (array-has-fill-pointer-p vector)
@@ -101,7 +111,8 @@
 
 
 @export
-(defun merge-sorted-vectors (comparsion-fn desired-size &rest vectors)
+(defun merge-ordered-vectors (comparsion-fn desired-size &rest vectors)
+  "Merges ordered vectors into new ordered vector (according to the comparsion-fn). Returns new vector"
   (declare (type (function (t t) symbol) comparsion-fn))
   (iterate main-loop
 
@@ -143,19 +154,28 @@
 
 @export
 (defclass vector-replacer ()
-  ())
+  ()
+  (:documentation "Fundamental class of vector replacer. Used to represent memory pools holding vector buffers."))
 
 
 @export
-(defgeneric resize-content (vector-container vector-replacer new-size copy-mask))
+(defgeneric resize-content (vector-container vector-replacer new-size copy-mask)
+  (:documentation "Changes size of the content by taking new buffer from vector-replacer. Copies elements as described in the copy mask (nested list) afterwards.
+                   May return old buffer to the vector-replacer afterwards."))
 
 
 @export
-(defgeneric get-buffer (replacer container new-size))
+(defgeneric copy-vector-container (vector-replacer vector-container new-size copy-mask))
 
 
 @export
-(defgeneric consume-buffer (replace old-buffer))
+(defgeneric get-buffer (replacer container new-size)
+  (:documentation "Returns vector buffer of lenght = new-size. It may contain garbage."))
+
+
+@export
+(defgeneric consume-buffer (replace old-buffer)
+  (:documentation "Passes old-buffer to the replacer so it can be taken care of."))
 
 
 @export
@@ -169,7 +189,9 @@
     :initarg :content)
    (%replacer
     :type vector-replacer
-    :accessor access-replacer)))
+    :accessor access-replacer))
+  (:documentation "Vector container is a class that acts as wrapper around vector-container
+                   so It can delegate resizing of the vector to the separate object (that can act as a memory pool)"))
 (export '(%content access-replacer))
 
 
@@ -180,6 +202,22 @@
       (consume-buffer (access-replacer container)
                       buffer)
       t)))
+
+
+(defmethod copy-vector-container ((replacer vector-replacer) (container vector-container) new-size copy-mask)
+  (declare (type index new-size)
+           (type list copy-mask))
+  (let ((new-buffer (get-buffer replacer container new-size)))
+    (iterate
+      (for (to from count) in copy-mask)
+      (copy-with-mask new-buffer
+                      (slot-value container
+                                  '%content)
+                      (:from from :into to :times count)))
+    (let ((result (make-instance 'vector-container :content new-buffer)))
+      (setf (slot-value result '%replacer)
+            replacer)
+      result)))
 
 
 (defmethod print-object ((object vector-container) stream)

@@ -3,6 +3,10 @@
 
 @export
 (defun lower-bound (vector element comparsion-fn)
+  "Searches for the first element in the vector that when passed as first
+   argument to comparsion-fn (along with element passed as second argument) will return non-nil value.
+   Returns inedex pointing to the position of this element. If there is no such element, length of the vector is returned.
+   Vector passed as a first argument should be ordered, since this function performs binary search."
   (declare (type vector vector))
   (cond ((zerop (length vector))
          0)
@@ -22,9 +26,9 @@
 
 @export
 (defun order-by (sequence select-fn)
-  "Sorts container in ascending order by element returned by select-fn"
+  "Sorts container in ascending order by element returned by select-fn. Mutates passed sequence."
   (declare (type sequence sequence))
-  (sort sequence
-        (lambda (a b)
-          (< (funcall select-fn a)
-             (funcall select-fn b)))))
+  (sortf sequence
+         (lambda (a b)
+           (< (funcall select-fn a)
+              (funcall select-fn b)))))
