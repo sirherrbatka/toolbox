@@ -276,7 +276,7 @@
 (defun make-fixed-vector-pool (smallest-buffer largest-buffer)
   (declare (type index smallest-buffer largest-buffer))
   (make-instance 'fixed-vector-pool
-                 :buffers (- largest-buffer smallest-buffer)
+                 :buffers (make-array (- largest-buffer smallest-buffer))
                  :smallest-buffer-size smallest-buffer
                  :largest-buffer-size largest-buffer))
 
