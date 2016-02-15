@@ -135,3 +135,22 @@
           (setf (access-content-of-lookuptable table index)
                 item))
         (is (fixed-lookuptable= copy table))))))
+
+
+(test lookuptable-insert-random-four-at-once-into-copy
+      (let ((container (make-instance 'vector-container))
+            (factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
+            (data (batches (shuffle (iterate
+                                     (for i from 0 below 32)
+                                     (collect (list* i (gensym)))))
+                           4)))
+        (setf (access-replacer container)
+              (read-replacer factory))
+        (with-fixture lookuptable-init (container 0)
+          (iterate
+           (for batch in data)
+           (for copy = (insert-into-copy factory table (first batch) (second batch) (third batch) (fourth batch)))
+           (iterate (for (index . item) in batch)
+                    (setf (access-content-of-lookuptable table index)
+                          item))
+           (is (fixed-lookuptable= copy table))))))
