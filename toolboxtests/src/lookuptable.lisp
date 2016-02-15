@@ -69,7 +69,7 @@
                 symbol))))))
 
 
-(test lookuptable-insert-into-copy
+(test lookuptable-insert-one-into-copy
   (let ((container (make-instance 'vector-container))
         (factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
         (data (shuffle (iterate
@@ -84,8 +84,15 @@
         (let ((copy (insert-into-copy factory table elt)))
           (setf (access-content-of-lookuptable table index)
                 item)
-          (is (fixed-lookuptable= copy table)))))
-    (setf container (make-instance 'vector-container))
+          (is (fixed-lookuptable= copy table)))))))
+
+
+(test lookuptable-insert-two-at-once-into-copy
+  (let ((container (make-instance 'vector-container))
+        (factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
+        (data (shuffle (iterate
+                         (for i from 0 below 32)
+                         (collect (list* i (gensym)))))))
     (setf (access-replacer container)
           (read-replacer factory))
     (with-fixture lookuptable-init (container 0)
@@ -109,3 +116,22 @@
         (setf (access-content-of-lookuptable table 15) 'b)
         (setf (access-content-of-lookuptable table 17) 'c)
         (is (fixed-lookuptable= table copy))))))
+
+
+(test lookuptable-insert-random-two-at-once-into-copy
+  (let ((container (make-instance 'vector-container))
+        (factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
+        (data (batches (shuffle (iterate
+                                 (for i from 0 below 32)
+                                  (collect (list* i (gensym)))))
+                       2)))
+    (setf (access-replacer container)
+          (read-replacer factory))
+    (with-fixture lookuptable-init (container 0)
+      (iterate
+        (for batch in data)
+        (for copy = (insert-into-copy factory table (first batch) (second batch)))
+        (iterate (for (index . item) in batch)
+          (setf (access-content-of-lookuptable table index)
+                item))
+        (is (fixed-lookuptable= copy table))))))
