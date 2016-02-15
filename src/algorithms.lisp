@@ -28,7 +28,7 @@
 (defun order-by (sequence select-fn)
   "Sorts container in ascending order by element returned by select-fn. Mutates passed sequence."
   (declare (type sequence sequence))
-  (sortf sequence
-         (lambda (a b)
-           (< (funcall select-fn a)
-              (funcall select-fn b)))))
+  (sort sequence
+        (lambda (a b)
+          (< (funcall select-fn a)
+             (funcall select-fn b)))))

@@ -10,7 +10,7 @@
 
 
 (test lookuptable-insert
-  (let ((container (make-instance 'vector-container :content (make-array 0))))
+  (let ((container (make-instance 'vector-container)))
     (setf (access-replacer container)
           (make-instance 'hash-vector-pool))
     (with-fixture lookuptable-init (container 0)
@@ -48,7 +48,7 @@
 
 
 (test lookuptable-random-fill
-  (let* ((container (make-instance 'vector-container :content (make-array 0)))
+  (let* ((container (make-instance 'vector-container))
          (data (iterate
                  (for i from 0 below 32)
                  (collect (list* (gensym) i))))
@@ -67,3 +67,45 @@
         (for (symbol . index) in data)
         (is (eq (access-content-of-lookuptable table index)
                 symbol))))))
+
+
+(test lookuptable-insert-into-copy
+  (let ((container (make-instance 'vector-container))
+        (factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
+        (data (shuffle (iterate
+                         (for i from 0 below 32)
+                         (collect (list* i (gensym)))))))
+    (setf (access-replacer container)
+          (read-replacer factory))
+    (with-fixture lookuptable-init (container 0)
+      (iterate
+        (for elt in data)
+        (for (index . item) = elt)
+        (let ((copy (insert-into-copy factory table elt)))
+          (setf (access-content-of-lookuptable table index)
+                item)
+          (is (fixed-lookuptable= copy table)))))
+    (setf container (make-instance 'vector-container))
+    (setf (access-replacer container)
+          (read-replacer factory))
+    (with-fixture lookuptable-init (container 0)
+      (iterate
+        (for i from 0 below 14)
+        (for (index . item) in data)
+        (setf (access-content-of-lookuptable table i)
+              item))
+      (setf (access-content-of-lookuptable table 16)
+            :test)
+      (iterate
+        (for i from 18 below 30)
+        (for (index . item) in data)
+        (setf (access-content-of-lookuptable table i)
+              item))
+      (let ((copy (insert-into-copy factory table
+                                    (list* 14 'a)
+                                    (list* 15 'b)
+                                    (list* 17 'c))))
+        (setf (access-content-of-lookuptable table 14) 'a)
+        (setf (access-content-of-lookuptable table 15) 'b)
+        (setf (access-content-of-lookuptable table 17) 'c)
+        (is (fixed-lookuptable= table copy))))))

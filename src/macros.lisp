@@ -30,7 +30,8 @@
 
 @export
 (defmacro sortf (argument comparsion-fn)
-  `(setf ,argument (sort ,argument ,comparsion-fn)))
+  `(progn (setf ,argument (sort ,argument ,comparsion-fn))
+          ,argument))
 
 
 @export

@@ -10,6 +10,7 @@
   :serial T
   :components ((:file "package")
                (:file "src/utils")
+               (:file "src/bitwise")
                (:file "src/macros")
                (:file "src/streams")
                (:file "src/algorithms")

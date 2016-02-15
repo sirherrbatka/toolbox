@@ -106,3 +106,24 @@
   (declare (number x lower upper))
   (and (<= x upper)
        (>= x lower)))
+
+
+@export
+(defun group-ordered-sequence (group-fn sequence)
+  (labels ((new-group (item)
+             (adjustable-vector item))
+           (add-element-to-group (group item)
+             (vector-push-extend item group)))
+    (iterate
+      (for el in-sequence sequence)
+      (for prev-el previous el initially nil)
+      (with result = nil)
+      (let ((first-iteration-p (if-first-time t nil)))
+        (if (or first-iteration-p
+                (not (funcall group-fn
+                              (let ((group (car result)))
+                                (aref group (1- (length group))))
+                              el)))
+            (push (new-group el) result)
+            (add-element-to-group (car result) el)))
+      (finally (return (reverse result))))))

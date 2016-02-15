@@ -11,7 +11,14 @@
    (%mask
     :type (unsigned-byte 32)
     :initarg :mask
-    :reader read-mask)))
+    :reader read-mask))
+  (:documentation "Lookuptable that can hold up to 32 elements, under 32 indexes (from 0 to 31)."))
+
+
+(defmethod print-object ((object fixed-lookuptable) stream)
+  (format stream "<Lookuptable ~b: ~a>"
+          (read-mask object)
+          (read-container object)))
 
 
 @export
@@ -25,39 +32,116 @@
 @export
 (defgeneric make-lookuptable (factory))
 
+
+(defgeneric copy-lookuptable (factory lookuptable new-mask copy-mask))
+
+
 @export
-(defgeneric copy-lookuptable (factory lookuptable new-size new-mask copy-mask))
+(defgeneric insert-into-copy (factory lookuptable &rest elements)
+  (:documentation "Create copy of the lookuptable, next place elements (can overwrite existing content) into created copy. Finally return created copy."))
 
 
 (defmethod make-lookuptable ((factory fixed-lookuptable-factory))
   (make-instance 'fixed-lookuptable
                  :mask 0
-                 :content (make-array 0)
                  :container (let ((container (make-instance 'vector-container)))
                               (setf (access-replacer container)
                                     (read-replacer factory))
                               container)))
 
 
+(defun to-container-mask (copy-mask old-lookuptable-mask new-lookuptable-mask)
+  (declare (type index new-lookuptable-mask old-lookuptable-mask)
+           (type list copy-mask))
+  (destructuring-mapcar ((to from count) copy-mask)
+    (list (1+ (apply-mask-to-index from new-lookuptable-mask))
+          (apply-mask-to-index from old-lookuptable-mask)
+          count)))
+
+
 (defmethod copy-lookuptable ((factory fixed-lookuptable-factory)
                              (lookuptable fixed-lookuptable)
-                             new-size
                              new-mask
                              copy-mask)
   (declare (type list copy-mask)
-           (type index new-size new-mask))
+           (type index new-mask))
   (make-instance 'fixed-lookuptable
-                 :content (copy-vector-container (read-replacer factory)
-                                                 (read-container lookuptable)
-                                                 new-size
-                                                 copy-mask)
+                 :container (copy-vector-container (read-replacer factory)
+                                                   (read-container lookuptable)
+                                                   (logcount new-mask)
+                                                   copy-mask)
                  :mask new-mask))
+
+
+(defmethod insert-into-copy ((factory fixed-lookuptable-factory) (lookuptable fixed-lookuptable) &rest elements)
+  (let* ((vector-of-elements (order-by (map 'vector (lambda (x) (cons (lookuptable-contains-item-under-index lookuptable (car x))
+                                                                      x))
+                                            elements)
+                                       #'cadr))
+
+         (new-mask (reduce (lambda (prev next)
+                             (alter-mask (cadr next)
+                                         prev))
+                           vector-of-elements
+                           :initial-value (read-mask lookuptable)))
+
+         (new-areas (~> (remove-if #'car vector-of-elements)
+                        (map 'vector (lambda (x)
+                                       (destructuring-bind (in index . value) x
+                                         (declare (ignore in value))
+                                         (list (apply-mask-to-index index new-mask)
+                                               (apply-mask-to-index index (read-mask lookuptable)))))
+                             _)
+                        (group-ordered-sequence (lambda (last next)
+                                                  (= 1 (- (car next) (car last))))
+                                                _)
+                        (mapcar (lambda (group)
+                                  (let ((start (aref group 0))
+                                        (end (aref group (1- (length group)))))
+                                    (list start end)))
+                                _)))
+
+         (copy-mask (iterate
+                      (for ((area-start-to area-start-from) (area-end-to area-end-from)) in new-areas)
+                      (with from = 0)
+                      (with to = 0)
+                      (with result = nil)
+                      (when (= from area-start-from)
+                        (setf to (1+ area-end-to)))
+                      (for count = (- area-start-from from))
+                      (unless (zerop count)
+                        (push (list to from count) result))
+                      (incf from count)
+                      (setf to (1+ area-end-to))
+                      (finally (let ((count (- (elements-count lookuptable) from)))
+                                 (when (positive-integer-p count)
+                                   (push (list to from count) result))
+                                 (return (reverse result))))))
+
+         (result (copy-lookuptable factory lookuptable new-mask copy-mask)))
+
+    (iterate
+      (for elt in-vector vector-of-elements)
+      (for (index . value) = (cdr elt))
+      (setf (access-content-of-lookuptable result index)
+            value))
+
+    result))
+
+
+@export
+(defun fixed-lookuptable= (a b)
+  (declare (type fixed-lookuptable a b))
+  (and (= (read-mask a)
+          (read-mask b))
+       (vector-container= (read-container a)
+                          (read-container b))))
 
 
 @export
 (defun make-fixed-lookuptable-factory (replacer)
   (declare (type vector-replacer replacer))
-  (make-instance 'fixed-lookuptable-factory :replace replacer))
+  (make-instance 'fixed-lookuptable-factory :replacer replacer))
 
 
 (defmacro with-lookuptable ((&key container-position access) lookuptable &body body)

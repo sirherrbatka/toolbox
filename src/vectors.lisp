@@ -208,12 +208,12 @@
   (declare (type index new-size)
            (type list copy-mask))
   (let ((new-buffer (get-buffer replacer container new-size)))
-    (iterate
-      (for (to from count) in copy-mask)
-      (copy-with-mask new-buffer
-                      (slot-value container
-                                  '%content)
-                      (:from from :into to :times count)))
+    (when (slot-boundp container '%content)
+      (iterate
+        (for (to from count) in copy-mask)
+        (copy-with-mask new-buffer
+                        (slot-value container '%content)
+                        (:from from :into to :times count))))
     (let ((result (make-instance 'vector-container :content new-buffer)))
       (setf (slot-value result '%replacer)
             replacer)
@@ -221,7 +221,9 @@
 
 
 (defmethod print-object ((object vector-container) stream)
-  (format stream "<Vector-Container: ~a>" (slot-value object '%content)))
+  (format stream "<Vector-Container: ~a>" (if (slot-boundp object '%content)
+                                              (slot-value object '%content)
+                                              (make-array 0))))
 
 
 @export
@@ -233,7 +235,15 @@
 
 
 @export
+(defun vector-container= (a b)
+  (declare (type vector-container a b))
+  (vector= (slot-value a '%content)
+           (slot-value b '%content)))
+
+
+@export
 (defun access-content (vector-container index)
+  "Accessor used to read values from vector-container (under index)"
   (declare (type vector-container vector-container)
            (type index index))
   (aref (slot-value vector-container '%content)
@@ -251,6 +261,7 @@
 (defun (setf access-content) (new-value
                               vector-container
                               index)
+  "Writer for internal buffer"
   (declare (type vector-container vector-container)
            (type index index))
   (ensure-buffer vector-container)
@@ -266,6 +277,7 @@
 
 @export
 (defun insert-into-content (vector-container new-value index)
+  "First: resize content. Next copy content into new vector."
   (declare (type vector-container vector-container)
            (type index index))
   (let ((was-not-initialized (ensure-buffer vector-container)))
@@ -282,7 +294,8 @@
 
 @export
 (defclass vector-pool (vector-replacer)
-  ())
+  ()
+  (:documentation "Fundamental class for all vector pools."))
 
 
 @export
@@ -290,7 +303,8 @@
   ((%buffers
     :type hash-table
     :initform (make-hash-table)
-    :accessor access-buffers)))
+    :accessor access-buffers))
+  (:documentation "Vector pool that uses hash table to store vectors."))
 
 
 @export
@@ -306,7 +320,8 @@
    (%largest-buffer-size
     :type index
     :reader read-largest-buffer-size
-    :initarg :largest-buffer-size)))
+    :initarg :largest-buffer-size))
+  (:documentation "Vector pool that stores buffers in vector. Since vector needs to bounded. It can only supply buffers of certain length"))
 (export '(read-smallest-buffer-size largest-buffer-size))
 
 
@@ -366,10 +381,12 @@
     (when (slot-boundp vector-container '%content)
       (let ((old-content (slot-value vector-container '%content)))
         (iterate
-          (for (to from count) in copy-indexes)
-          (copy-with-mask new-content
-                          (slot-value vector-container '%content)
-                          (:from from :into to :times count)))
+          (for current in copy-indexes)
+          (when current
+            (destructuring-bind (to from count) current
+              (copy-with-mask new-content
+                              (slot-value vector-container '%content)
+                              (:from from :into to :times count)))))
         (consume-buffer replacer old-content)))
     (setf (slot-value vector-container '%content)
           new-content)
@@ -378,6 +395,19 @@
 
 @export
 (defun condition-copy (destination source condition-fn destination-start source-start)
+  "Universal vector copy function. Will copy elements from source to destination. Process is controled by condition-fn.
+   Condition-fn takes two arguments (current destination element and current source element) and returns 3 values:
+   first one describes how destination should change, second one describes how source position should change,
+   third one is operation that will be performed.
+
+   Position changes are described as changes to the index position. Those may be either positive or negative,
+   for instance: 2 means increasing index by two, while -1 means decreasing index by one.
+
+   Operations are keyword symbols :copy :move :move-copy :end. Those have the following meaning:
+   :copy first copy source to destination, next move by positions returned.
+   :move move by positions returned
+   :move-copy first move by positions returned, next copy source to destination
+   :end finish copying. This function will return."
   (declare (type vector destination source)
            (type index destination-start source-start))
   (block outer

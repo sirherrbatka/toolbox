@@ -10,4 +10,5 @@
   :serial T
   :components ((:file "package")
                (:file "src/vectors")
+               (:file "src/utils")
                (:file "src/lookuptable")))
