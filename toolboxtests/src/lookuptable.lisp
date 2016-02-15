@@ -115,7 +115,8 @@
         (setf (access-content-of-lookuptable table 14) 'a)
         (setf (access-content-of-lookuptable table 15) 'b)
         (setf (access-content-of-lookuptable table 17) 'c)
-        (is (fixed-lookuptable= table copy))))))
+        (is (fixed-lookuptable= table copy))
+        (return-lookuptable factory copy)))))
 
 
 (test lookuptable-insert-random-two-at-once-into-copy
@@ -134,7 +135,8 @@
         (iterate (for (index . item) in batch)
           (setf (access-content-of-lookuptable table index)
                 item))
-        (is (fixed-lookuptable= copy table))))))
+        (is (fixed-lookuptable= copy table))
+        (return-lookuptable factory copy)))))
 
 
 (test lookuptable-insert-random-four-at-once-into-copy
@@ -153,4 +155,5 @@
            (iterate (for (index . item) in batch)
                     (setf (access-content-of-lookuptable table index)
                           item))
-           (is (fixed-lookuptable= copy table))))))
+            (is (fixed-lookuptable= copy table))
+            (return-lookuptable factory copy)))))

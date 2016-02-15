@@ -179,7 +179,7 @@
 
 
 @export
-(defgeneric return-container (container))
+(defgeneric return-container (replacer container))
 
 
 @export
@@ -195,12 +195,11 @@
 (export '(%content access-replacer))
 
 
-(defmethod return-container ((container vector-container))
+(defmethod return-container ((replacer vector-replacer) (container vector-container))
   (when (slot-boundp container '%content)
     (let ((buffer (slot-value container '%content)))
       (slot-makunbound container '%content)
-      (consume-buffer (access-replacer container)
-                      buffer)
+      (consume-buffer replacer buffer)
       t)))
 
 

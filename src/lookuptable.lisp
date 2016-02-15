@@ -214,3 +214,11 @@
 (defun elements-count (lookuptable)
   (declare (type fixed-lookuptable lookuptable))
   (content-length (read-container lookuptable)))
+
+
+@export
+(defgeneric returun-lookuptable (factory lookuptable))
+
+
+(defmethod return-lookuptable ((factory fixed-lookuptable-factory) (lookuptable fixed-lookuptable))
+  (return-container (read-replacer factory) (read-container lookuptable)))
