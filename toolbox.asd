@@ -9,8 +9,8 @@
   :depends-on (:iterate :alexandria :serapeum :cl-annot :optima :quid-pro-quo)
   :serial T
   :components ((:file "package")
-               (:file "src/types")
                (:file "src/utils")
+               (:file "src/types")
                (:file "src/bitwise")
                (:file "src/macros")
                (:file "src/streams")

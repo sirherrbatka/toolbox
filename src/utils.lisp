@@ -127,3 +127,21 @@
             (push (new-group el) result)
             (add-element-to-group (car result) el)))
       (finally (return (reverse result))))))
+
+
+@export
+(defmacro is-ordered (select sequence)
+  (with-gensyms (!select-symbol)
+    `(macrolet ((,!select-symbol ,@select))
+       (iterate
+         (for elt in-sequence ,sequence)
+         (for pelt previous elt)
+         (if-first-time
+          t
+          (always (,!select-symbol pelt elt)))))))
+
+
+(defun ordered-with-car (sequence)
+  (is-ordered ((prev next) `(<= (car ,prev)
+                                (car ,next)))
+              sequence))

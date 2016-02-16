@@ -18,11 +18,10 @@
     (finally (return result))))
 
 
-;;TODO new type for ordered list
 @export
 (defun move-byte-regions (byte-specifers moved-value)
   (declare (type (unsigned-byte 32) moved-value)
-           (type list byte-specifers))
+           (type byte-specifer-list byte-specifers))
   (reduce (lambda (prev next)
             (let ((starting-region (byte (- 32 (car next)) 0))
                   (shift (- (cdr next) (car next))))
