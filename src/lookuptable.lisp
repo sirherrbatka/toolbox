@@ -73,7 +73,7 @@
                              (lookuptable fixed-lookuptable)
                              new-mask
                              copy-mask)
-  (declare (type list copy-mask)
+  (declare (type vector-copy-list copy-mask)
            (type index new-mask))
   (make-instance 'fixed-lookuptable
                  :container (copy-vector-container (read-container lookuptable)

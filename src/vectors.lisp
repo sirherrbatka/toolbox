@@ -3,10 +3,6 @@
 
 
 @export
-(deftype index () `(unsigned-byte 32))
-
-
-@export
 (defun adjustable-vector (&rest elements)
   "Creates and returns adjustable vector holding all elements"
   (let ((product (make-array '(0) :adjustable t :fill-pointer 0)))
@@ -211,7 +207,7 @@
 
 (defmethod copy-vector-container ((container vector-container) new-size copy-mask)
   (declare (type index new-size)
-           (type list copy-mask))
+           (type vector-copy-list copy-mask))
   (let ((new-buffer (get-buffer *vector-replacer* container new-size)))
     (when (slot-boundp container '%content)
       (iterate
