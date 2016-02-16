@@ -78,7 +78,7 @@
         (iterate
           (for elt in data)
           (for (index . item) = elt)
-          (let ((copy (insert-into-copy factory table elt)))
+          (let ((copy (insert-into-copy table elt)))
             (setf (access-content-of-lookuptable table index)
                   item)
             (is (fixed-lookuptable= copy table))))))))
@@ -104,7 +104,7 @@
           (for (index . item) in data)
           (setf (access-content-of-lookuptable table i)
                 item))
-        (let ((copy (insert-into-copy factory table
+        (let ((copy (insert-into-copy table
                                       (list* 14 'a)
                                       (list* 15 'b)
                                       (list* 17 'c))))
@@ -126,7 +126,7 @@
       (with-fixture lookuptable-init (container 0)
         (iterate
           (for batch in data)
-          (for copy = (insert-into-copy factory table (first batch) (second batch)))
+          (for copy = (insert-into-copy table (first batch) (second batch)))
           (iterate (for (index . item) in batch)
             (setf (access-content-of-lookuptable table index)
                   item))
@@ -145,7 +145,7 @@
           (with-fixture lookuptable-init (container 0)
             (iterate
               (for batch in data)
-              (for copy = (insert-into-copy factory table (first batch) (second batch) (third batch) (fourth batch)))
+              (for copy = (insert-into-copy table (first batch) (second batch) (third batch) (fourth batch)))
               (iterate (for (index . item) in batch)
                 (setf (access-content-of-lookuptable table index)
                       item))

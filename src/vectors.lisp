@@ -158,9 +158,11 @@
   (:documentation "Fundamental class of vector replacer. Used to represent memory pools holding vector buffers."))
 
 
+@export
 (defvar *vector-replacer*)
 
 
+@export
 (defmacro with-vector-replacer (replacer &body body)
   `(let ((*vector-replacer* ,replacer))
      ,@body))

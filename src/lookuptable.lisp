@@ -29,20 +29,27 @@
     :reader read-replacer)))
 
 
+@export
+(defvar *lookuptable-factory*)
+
+
+@export
 (defmacro with-lookuptable-factory (factory &body body)
-  `(with-vector-replacer (read-replacer factory)
-     ,@body))
+  `(with-vector-replacer (read-replacer ,factory)
+     (let ((*lookuptable-factory* ,factory))
+       ,@body)))
 
 
 @export
 (defgeneric make-lookuptable (factory))
 
 
+@export
 (defgeneric copy-lookuptable (factory lookuptable new-mask copy-mask))
 
 
 @export
-(defgeneric insert-into-copy (factory lookuptable &rest elements)
+(defgeneric insert-into-copy (lookuptable &rest elements)
   (:documentation "Create copy of the lookuptable, next place elements (can overwrite existing content) into created copy. Finally return created copy."))
 
 
@@ -75,7 +82,7 @@
                  :mask new-mask))
 
 
-(defmethod insert-into-copy ((factory fixed-lookuptable-factory) (lookuptable fixed-lookuptable) &rest elements)
+(defmethod insert-into-copy ((lookuptable fixed-lookuptable) &rest elements)
   (let* ((vector-of-elements (order-by (map 'vector (lambda (x) (cons (lookuptable-contains-item-under-index lookuptable (car x))
                                                                       x))
                                             elements)
@@ -120,7 +127,7 @@
                                    (push (list to from count) result))
                                  (return (reverse result))))))
 
-         (result (copy-lookuptable factory lookuptable new-mask copy-mask)))
+         (result (copy-lookuptable *lookuptable-factory* lookuptable new-mask copy-mask)))
 
     (iterate
       (for elt in-vector vector-of-elements)
