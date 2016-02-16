@@ -44,7 +44,6 @@
 (defgeneric make-lookuptable (factory))
 
 
-@export
 (defgeneric copy-lookuptable (factory lookuptable new-mask copy-mask))
 
 
@@ -226,8 +225,9 @@
 
 
 @export
-(defgeneric returun-lookuptable (factory lookuptable))
+(defgeneric returun-lookuptable (lookuptable))
 
 
-(defmethod return-lookuptable ((factory fixed-lookuptable-factory) (lookuptable fixed-lookuptable))
-  (return-container (read-container lookuptable)))
+(defmethod return-lookuptable ((lookuptable fixed-lookuptable))
+  (return-container (read-container lookuptable))
+  (setf (slot-value lookuptable '%mask) 0))
