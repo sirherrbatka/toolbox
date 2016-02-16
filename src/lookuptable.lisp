@@ -29,6 +29,11 @@
     :reader read-replacer)))
 
 
+(defmacro with-lookuptable-factory (factory &body body)
+  `(with-vector-replacer (read-replacer factory)
+     ,@body))
+
+
 @export
 (defgeneric make-lookuptable (factory))
 
@@ -45,8 +50,6 @@
   (make-instance 'fixed-lookuptable
                  :mask 0
                  :container (let ((container (make-instance 'vector-container)))
-                              (setf (access-replacer container)
-                                    (read-replacer factory))
                               container)))
 
 
@@ -66,8 +69,7 @@
   (declare (type list copy-mask)
            (type index new-mask))
   (make-instance 'fixed-lookuptable
-                 :container (copy-vector-container (read-replacer factory)
-                                                   (read-container lookuptable)
+                 :container (copy-vector-container (read-container lookuptable)
                                                    (logcount new-mask)
                                                    copy-mask)
                  :mask new-mask))
@@ -221,4 +223,4 @@
 
 
 (defmethod return-lookuptable ((factory fixed-lookuptable-factory) (lookuptable fixed-lookuptable))
-  (return-container (read-replacer factory) (read-container lookuptable)))
+  (return-container (read-container lookuptable)))

@@ -158,14 +158,22 @@
   (:documentation "Fundamental class of vector replacer. Used to represent memory pools holding vector buffers."))
 
 
+(defvar *vector-replacer*)
+
+
+(defmacro with-vector-replacer (replacer &body body)
+  `(let ((*vector-replacer* ,replacer))
+     ,@body))
+
+
 @export
-(defgeneric resize-content (vector-container vector-replacer new-size copy-mask)
+(defgeneric resize-content (vector-container new-size copy-mask)
   (:documentation "Changes size of the content by taking new buffer from vector-replacer. Copies elements as described in the copy mask (nested list) afterwards.
                    May return old buffer to the vector-replacer afterwards."))
 
 
 @export
-(defgeneric copy-vector-container (vector-replacer vector-container new-size copy-mask))
+(defgeneric copy-vector-container (vector-container new-size copy-mask))
 
 
 @export
@@ -179,34 +187,30 @@
 
 
 @export
-(defgeneric return-container (replacer container))
+(defgeneric return-container (container))
 
 
 @export
 (defclass vector-container ()
   ((%content
     :type vector
-    :initarg :content)
-   (%replacer
-    :type vector-replacer
-    :accessor access-replacer))
+    :initarg :content))
   (:documentation "Vector container is a class that acts as wrapper around vector-container
                    so It can delegate resizing of the vector to the separate object (that can act as a memory pool)"))
-(export '(%content access-replacer))
 
 
-(defmethod return-container ((replacer vector-replacer) (container vector-container))
+(defmethod return-container ((container vector-container))
   (when (slot-boundp container '%content)
     (let ((buffer (slot-value container '%content)))
       (slot-makunbound container '%content)
-      (consume-buffer replacer buffer)
+      (consume-buffer *vector-replacer* buffer)
       t)))
 
 
-(defmethod copy-vector-container ((replacer vector-replacer) (container vector-container) new-size copy-mask)
+(defmethod copy-vector-container ((container vector-container) new-size copy-mask)
   (declare (type index new-size)
            (type list copy-mask))
-  (let ((new-buffer (get-buffer replacer container new-size)))
+  (let ((new-buffer (get-buffer *vector-replacer* container new-size)))
     (when (slot-boundp container '%content)
       (iterate
         (for (to from count) in copy-mask)
@@ -214,8 +218,6 @@
                         (slot-value container '%content)
                         (:from from :into to :times count))))
     (let ((result (make-instance 'vector-container :content new-buffer)))
-      (setf (slot-value result '%replacer)
-            replacer)
       result)))
 
 
@@ -253,7 +255,7 @@
   (declare (type vector-container container))
   (unless (slot-boundp container '%content)
     (setf (slot-value container '%content)
-          (get-buffer (access-replacer container) container 1))))
+          (get-buffer *vector-replacer* container 1))))
 
 
 @export
@@ -267,7 +269,6 @@
   (with-vector ((va l v) (slot-value vector-container '%content))
     (when (>= index l)
       (resize-content vector-container
-                      (access-replacer vector-container)
                       (1+ index)
                       (list  (list 0 0 index)
                              (list (1+ index) index array-total-size-limit))))
@@ -283,7 +284,6 @@
     (with-vector ((va l v) (slot-value vector-container '%content))
       (let ((new-size (1+ (max index (if was-not-initialized 0 l)))))
         (resize-content vector-container
-                        (access-replacer vector-container)
                         new-size
                         (list (list 0 0 index)
                               (list (1+ index) index array-total-size-limit))))
@@ -374,9 +374,8 @@
     replace))
 
 
-(defmethod resize-content ((vector-container vector-container) (replacer vector-pool)
-                           new-size copy-indexes)
-  (let ((new-content (get-buffer replacer vector-container new-size)))
+(defmethod resize-content ((vector-container vector-container) new-size copy-indexes)
+  (let ((new-content (get-buffer *vector-replacer* vector-container new-size)))
     (when (slot-boundp vector-container '%content)
       (let ((old-content (slot-value vector-container '%content)))
         (iterate
@@ -386,7 +385,7 @@
               (copy-with-mask new-content
                               (slot-value vector-container '%content)
                               (:from from :into to :times count)))))
-        (consume-buffer replacer old-content)))
+        (consume-buffer *vector-replacer* old-content)))
     (setf (slot-value vector-container '%content)
           new-content)
     new-content))
