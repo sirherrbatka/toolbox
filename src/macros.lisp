@@ -1,6 +1,7 @@
 (in-package :toolbox)
 (annot:enable-annot-syntax)
 
+
 @export
 (defun sharp-f (stream char subchar)
   "Function responsible for creating literal lambda (reader-macro)."
@@ -25,8 +26,8 @@
     `(lambda (&rest ,vargs)
        ,(read stream nil nil t))))
 
-
 (set-dispatch-macro-character #\# #\F #'sharp-f)
+
 
 @export
 (defmacro sortf (argument comparsion-fn)

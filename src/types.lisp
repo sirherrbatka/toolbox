@@ -10,6 +10,7 @@
                      (non-negative-integer-p (cdr x))))
               list)))
 
+
 @export
 (deftype byte-specifer-list ()
   `(and list

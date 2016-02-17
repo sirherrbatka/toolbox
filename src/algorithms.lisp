@@ -1,6 +1,7 @@
 (in-package :toolbox)
 (annot:enable-annot-syntax)
 
+
 @export
 (defun lower-bound (vector element comparsion-fn)
   "Searches for the first element in the vector that when passed as first
@@ -23,6 +24,7 @@
           (if (funcall comparsion-fn (aref vector middle) element)
               (setf start (1+ middle))
               (setf end middle))))))
+
 
 @export
 (defun order-by (sequence select-fn)
