@@ -1,10 +1,18 @@
 (in-package :toolbox)
 (annot:enable-annot-syntax)
 
+(defun byt-specifer-listp (list)
+  (declare (type list list))
+  (and (ordered-with-car list)
+       (every (lambda (x)
+                (and (non-negative-integer-p (car x))
+                     (non-negative-integer-p (cdr x))))
+              list)))
 
 @export
 (deftype byte-specifer-list ()
-  `(and list (satisfies ordered-with-car)))
+  `(and list
+        (satisfies byte-specifer-listp)))
 
 
 (defun vector-copy-listp (list)
