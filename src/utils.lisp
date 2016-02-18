@@ -130,18 +130,16 @@
 
 
 @export
-(defmacro is-ordered (select sequence)
-  (with-gensyms (!select-symbol)
-    `(macrolet ((,!select-symbol ,@select))
-       (iterate
-         (for elt in-sequence ,sequence)
-         (for pelt previous elt)
-         (if-first-time
-          t
-          (always (,!select-symbol pelt elt)))))))
+(defun is-ordered (sequence fn)
+  (iterate
+   (for elt in-sequence sequence)
+   (for pelt previous elt)
+   (if-first-time
+    t
+    (always (funcall fn pelt elt)))))
 
 
 (defun ordered-with-car (sequence)
-  (is-ordered ((prev next) `(<= (car ,prev)
-                                (car ,next)))
-              sequence))
+  (is-ordered sequence
+              (lambda (prev next) (<= (car prev)
+                                      (car next)))))

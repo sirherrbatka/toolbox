@@ -110,6 +110,8 @@
 (defun merge-ordered-vectors (comparsion-fn desired-size &rest vectors)
   "Merges ordered vectors into new ordered vector (according to the comparsion-fn). Returns new vector"
   (declare (type (function (t t) symbol) comparsion-fn))
+  (assert (every (lambda (x) (is-ordered x comparsion-fn))
+                 vectors))
   (iterate main-loop
 
     (with total-size = (reduce #'+

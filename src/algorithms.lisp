@@ -9,6 +9,7 @@
    Returns inedex pointing to the position of this element. If there is no such element, length of the vector is returned.
    Vector passed as a first argument should be ordered, since this function performs binary search."
   (declare (type vector vector))
+  (assert (is-ordered vector comparsion-fn))
   (cond ((zerop (length vector))
          0)
         ((not (funcall comparsion-fn (aref vector 0) element))
