@@ -4,9 +4,9 @@
 
 @export
 (defun map-positive-byte-regions (value)
-  (declare (type (unsigned-byte 32) value))
+  (declare (type integer value))
   (iterate
-    (for i from 0 below 32)
+    (for i from 0 below (integer-length value))
     (for current-bit = (ldb (byte 1 i) value))
     (for prev-bit previous current-bit initially 0)
     (with start = 0)
