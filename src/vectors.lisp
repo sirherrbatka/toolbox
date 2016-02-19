@@ -376,6 +376,12 @@
     replace))
 
 
+(defguarantee resize-content ((container vector-container) new-size copy-mask)
+  (declare (ignore copy-mask)
+           (type index new-size))
+  (= new-size (length (slot-value container '%content))))
+
+
 (defmethod resize-content ((vector-container vector-container) new-size copy-indexes)
   (let ((new-content (get-buffer *vector-replacer* vector-container new-size)))
     (when (slot-boundp vector-container '%content)
