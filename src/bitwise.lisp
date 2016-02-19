@@ -20,15 +20,16 @@
 
 @export
 (defun move-byte-regions (byte-specifers moved-value)
-  (declare (type (unsigned-byte 32) moved-value)
+  (declare (type integer moved-value)
            (type byte-specifer-list byte-specifers))
-  (reduce (lambda (prev next)
-            (let ((starting-region (byte (- 32 (car next)) 0))
-                  (shift (- (cdr next) (car next))))
-              (+ (ldb starting-region prev)
-                 (dpb 0 starting-region (ash prev shift)))))
-          byte-specifers
-          :initial-value moved-value))
+  (let ((length (integer-length moved-value)))
+    (reduce (lambda (prev next)
+              (let ((starting-region (byte (- length (car next)) 0))
+                    (shift (- (cdr next) (car next))))
+                (+ (ldb starting-region prev)
+                   (dpb 0 starting-region (ash prev shift)))))
+            byte-specifers
+            :initial-value moved-value)))
 
 
 @export
