@@ -163,27 +163,29 @@
 @export
 (defmacro with-vector-replacer (replacer &body body)
   `(let ((*vector-replacer* ,replacer))
+     (declare (special *vector-replacer*))
      ,@body))
 
 
-@export
 (defgeneric resize-content (vector-container new-size copy-mask)
   (:documentation "Changes size of the content by taking new buffer from vector-replacer. Copies elements as described in the copy mask (nested list) afterwards.
                    May return old buffer to the vector-replacer afterwards."))
 
 
-@export
 (defgeneric copy-vector-container (vector-container new-size copy-mask))
 
 
-@export
 (defgeneric get-buffer (replacer container new-size)
   (:documentation "Returns vector buffer of lenght = new-size. It may contain garbage."))
 
 
-@export
 (defgeneric consume-buffer (replace old-buffer)
   (:documentation "Passes old-buffer to the replacer so it can be taken care of."))
+
+
+@export
+(defgeneric forget-buffers (replacer size)
+  (:documentation "Removes all avaible buffers of size"))
 
 
 @export
@@ -389,6 +391,25 @@
     (setf (slot-value vector-container '%content)
           new-content)
     new-content))
+
+
+(defrequirement forget-buffers ((replacer fixed-vector-pool) size)
+  (declare (type index size))
+  (with-accessors ((lower read-smallest-buffer-size)
+                   (upper read-largest-buffer-size)
+                   (buffers access-buffers)) replacer
+    (in-bounds new-size lower upper)))
+
+
+(defmethod forget-buffers ((replacer fixed-vector-pool) size)
+  (declare (type index size))
+  (setf (aref (access-buffers replacer) size)
+        nil))
+
+
+(defguarantee forget-buffers ((replacer fixed-vector-pool) size)
+  (declare (type index size))
+  (null (aref (access-buffers replacer) size)))
 
 
 @export

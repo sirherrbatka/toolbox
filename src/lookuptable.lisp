@@ -176,7 +176,6 @@
            ,@body)))))
 
 
-@export
 (defun apply-mask-to-index (index mask)
   (declare (type index index)
            (type (unsigned-byte 32) mask))
@@ -192,7 +191,6 @@
             (read-mask lookuptable))))
 
 
-@export
 (defun alter-mask (index mask)
   (declare (type index index)
            (type (unsigned-byte 32) mask))
@@ -225,7 +223,8 @@
 
 
 @export
-(defgeneric returun-lookuptable (lookuptable))
+(defgeneric return-lookuptable (lookuptable)
+  (:documentation "Return lookuptable container to the memory pool"))
 
 
 (defmethod return-lookuptable ((lookuptable fixed-lookuptable))
