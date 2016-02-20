@@ -151,3 +151,12 @@
                       item))
               (is (fixed-lookuptable= copy table))
               (return-lookuptable copy))))))
+
+
+(test lookuptable-signals-error-when-trying-to-access-non-existing-element
+  (let ((factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
+        (container (make-instance 'vector-container)))
+    (with-lookuptable-factory factory
+      (with-fixture lookuptable-init (container 0)
+        (fiveam:signals lookuptable-does-not-contain-item
+          (access-content-of-lookuptable table 0))))))

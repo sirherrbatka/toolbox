@@ -5,6 +5,6 @@
 
 (in-package :toolboxtests)
 
-(import-all-internal-package-symbols :toolbox :toolboxtests)
+(toolbox:import-all-internal-package-symbols :toolbox :toolboxtests)
 
 (def-suite toolboxtests :description "test for toolbox")

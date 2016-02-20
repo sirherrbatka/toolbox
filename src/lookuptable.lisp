@@ -152,6 +152,14 @@
   (make-instance 'fixed-lookuptable-factory :replacer replacer))
 
 
+@export
+(define-condition lookuptable-does-not-contain-item (error)
+  ((%index
+    :initarg index
+    :type index
+    :reader read-index)))
+
+
 (defmacro with-lookuptable ((&key container-position access) lookuptable &body body)
   (with-gensyms (!lookuptable)
     (let ((!container-position (or container-position (gensym))))
@@ -159,7 +167,9 @@
          (labels ,(append
                    `((,!container-position (index) (apply-mask-to-index index (read-mask ,!lookuptable))))
                    (when access
-                     `((,access (index) (access-content (read-container ,!lookuptable) (,!container-position index)))
+                     `((,access (index) (if (lookuptable-contains-item-under-index ,!lookuptable index)
+                                            (access-content (read-container ,!lookuptable) (,!container-position index))
+                                            (error 'lookuptable-does-not-contain-item :index index)))
                        ((setf ,access) (value index) (let ((real-position (,!container-position index)))
                                                        (if (lookuptable-contains-item-under-index ,!lookuptable index)
                                                            (setf (access-content (read-container ,!lookuptable)
@@ -181,6 +191,13 @@
            (type (unsigned-byte 32) mask))
   (assert (< index 32))
   (logcount (ldb (byte index 0) mask)))
+
+
+@export
+(defun maplookuptable (result-type function lookuptable)
+  (map result-type
+       function
+       (read-content (read-container lookuptable))))
 
 
 @export

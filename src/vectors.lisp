@@ -196,7 +196,8 @@
 (defclass vector-container ()
   ((%content
     :type vector
-    :initarg :content))
+    :initarg :content
+    :reader read-content))
   (:documentation "Vector container is a class that acts as wrapper around vector-container
                    so It can delegate resizing of the vector to the separate object (that can act as a memory pool)"))
 
