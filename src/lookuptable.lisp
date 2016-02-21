@@ -41,7 +41,7 @@
 
 
 @export
-(defgeneric make-lookuptable (factory))
+(defgeneric make-lookuptable (factory &optional elements))
 
 
 (defgeneric copy-lookuptable (factory lookuptable new-mask copy-mask))
@@ -52,11 +52,22 @@
   (:documentation "Create copy of the lookuptable, next place elements (can overwrite existing content) into created copy. Finally return created copy."))
 
 
-(defmethod make-lookuptable ((factory fixed-lookuptable-factory))
-  (make-instance 'fixed-lookuptable
-                 :mask 0
-                 :container (let ((container (make-instance 'vector-container)))
-                              container)))
+(defmethod make-lookuptable ((factory fixed-lookuptable-factory) &optional (elements nil))
+  (let* ((mask (reduce (lambda (prev next) (+ prev (ash 1 (car next))))
+                       elements
+                       :initial-value 0))
+         (size (logcount mask)))
+    (make-instance 'fixed-lookuptable
+                   :mask mask
+                   :container (let ((container (make-instance 'vector-container)))
+                                (resize-content container size nil)
+                                (map nil
+                                     (lambda (x) (destructuring-bind (index . element) x
+                                                   (let ((new-index (apply-mask-to-index index mask)))
+                                                     (setf (access-content container new-index)
+                                                           element))))
+                                     elements)
+                                container))))
 
 
 (defun to-container-mask (copy-mask old-lookuptable-mask new-lookuptable-mask)
@@ -74,7 +85,7 @@
                              copy-mask)
   (declare (type vector-copy-list copy-mask)
            (type index new-mask))
-  (make-instance 'fixed-lookuptable
+  (make-instance (type-of lookuptable)
                  :container (copy-vector-container (read-container lookuptable)
                                                    (logcount new-mask)
                                                    copy-mask)

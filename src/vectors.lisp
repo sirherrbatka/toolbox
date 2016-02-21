@@ -220,7 +220,7 @@
         (copy-with-mask new-buffer
                         (slot-value container '%content)
                         (:from from :into to :times count))))
-    (let ((result (make-instance 'vector-container :content new-buffer)))
+    (let ((result (make-instance (type-of container) :content new-buffer)))
       result)))
 
 
@@ -331,7 +331,11 @@
 (defun make-fixed-vector-pool (smallest-buffer largest-buffer)
   (declare (type index smallest-buffer largest-buffer))
   (make-instance 'fixed-vector-pool
-                 :buffers (make-array (- largest-buffer smallest-buffer))
+                 :buffers (let ((buffers (make-array (- largest-buffer smallest-buffer))))
+                            (map-into buffers
+                                      (lambda (x) (declare (ignore x))
+                                        nil)
+                                      buffers))
                  :smallest-buffer-size smallest-buffer
                  :largest-buffer-size largest-buffer))
 
@@ -352,7 +356,7 @@
                    (buffers access-buffers)) replace
     (let ((position (- new-size lower)))
       (unless (aref buffers position)
-        (push (make-array new-size)
+        (push (make-array (list new-size))
               (aref buffers position)))
       (prog1
           (car (aref buffers position))
@@ -364,7 +368,7 @@
   (declare (type index new-size))
   (let ((buffers (gethash new-size (access-buffers replacer))))
     (unless buffers
-      (push (make-array new-size) buffers))
+      (push (make-array (list new-size)) buffers))
     (setf (gethash new-size (access-buffers replacer))
           (cdr buffers))
     (car buffers)))
