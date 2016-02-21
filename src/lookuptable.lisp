@@ -9,7 +9,7 @@
     :reader read-container
     :initarg :container)
    (%mask
-    :type (unsigned-byte 32)
+    :type integer
     :initarg :mask
     :reader read-mask))
   (:documentation "Lookuptable that can hold up to 32 elements, under 32 indexes (from 0 to 31)."))
@@ -26,7 +26,12 @@
   ((%replacer
     :type vector-replacer
     :initarg :replacer
-    :reader read-replacer)))
+    :reader read-replacer)
+   (%mask-length
+    :type (unsigned-byte 8)
+    :initarg :mask-length
+    :initform 32
+    :reader read-mask-length)))
 
 
 @export
@@ -53,9 +58,10 @@
 
 
 (defmethod make-lookuptable ((factory fixed-lookuptable-factory) &optional (elements nil))
-  (let* ((mask (reduce (lambda (prev next) (+ prev (ash 1 (car next))))
-                       elements
-                       :initial-value 0))
+  (let* ((mask (coerce (reduce (lambda (prev next) (+ prev (ash 1 (car next))))
+                               elements
+                               :initial-value 0)
+                       `(unsigned-byte ,(read-mask-length factory))))
          (size (logcount mask)))
     (make-instance 'fixed-lookuptable
                    :mask mask
