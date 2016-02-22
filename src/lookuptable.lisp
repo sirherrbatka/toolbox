@@ -12,7 +12,7 @@
     :type (unsigned-byte 64)
     :initarg :mask
     :reader read-mask))
-  (:documentation "Lookuptable that can hold up to 32 elements, under 32 indexes (from 0 to 31)."))
+  (:documentation "Lookuptable that can hold up to 64 elements, under 64 indexes (from 0 to 63)."))
 
 
 (defmethod print-object ((object fixed-lookuptable) stream)
@@ -201,7 +201,7 @@
 (defun apply-mask-to-index (index mask)
   (declare (type index index)
            (type (unsigned-byte 64) mask))
-  (assert (< index 32))
+  (assert (< index 64))
   (logcount (ldb (byte index 0) mask)))
 
 
@@ -222,8 +222,8 @@
 
 (defun alter-mask (index mask)
   (declare (type index index)
-           (type (unsigned-byte 32) mask))
-  (assert (< index 32))
+           (type (unsigned-byte 64) mask))
+  (assert (< index 64))
   (dpb 1 (byte 1 index) mask))
 
 
