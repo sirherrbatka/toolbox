@@ -9,7 +9,7 @@
     :reader read-container
     :initarg :container)
    (%mask
-    :type integer
+    :type (unsigned-byte 64)
     :initarg :mask
     :reader read-mask))
   (:documentation "Lookuptable that can hold up to 32 elements, under 32 indexes (from 0 to 31)."))
@@ -26,12 +26,7 @@
   ((%replacer
     :type vector-replacer
     :initarg :replacer
-    :reader read-replacer)
-   (%mask-length
-    :type (unsigned-byte 8)
-    :initarg :mask-length
-    :initform 32
-    :reader read-mask-length)))
+    :reader read-replacer)))
 
 
 @export
@@ -61,7 +56,7 @@
   (let* ((mask (coerce (reduce (lambda (prev next) (+ prev (ash 1 (car next))))
                                elements
                                :initial-value 0)
-                       `(unsigned-byte ,(read-mask-length factory))))
+                       '(unsigned-byte 64)))
          (size (logcount mask)))
     (make-instance 'fixed-lookuptable
                    :mask mask
@@ -172,7 +167,7 @@
 @export
 (define-condition lookuptable-does-not-contain-item (error)
   ((%index
-    :initarg index
+    :initarg :index
     :type index
     :reader read-index)))
 
@@ -205,7 +200,7 @@
 
 (defun apply-mask-to-index (index mask)
   (declare (type index index)
-           (type (unsigned-byte 32) mask))
+           (type (unsigned-byte 64) mask))
   (assert (< index 32))
   (logcount (ldb (byte index 0) mask)))
 
