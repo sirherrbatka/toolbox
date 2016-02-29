@@ -193,6 +193,10 @@
 
 
 @export
+(defgeneric make-buffer (replacer size))
+
+
+@export
 (defclass vector-container ()
   ((%content
     :type vector
@@ -313,7 +317,6 @@
 (defclass fixed-vector-pool (vector-pool)
   ((%buffers
     :type (vector :type 'list)
-    :initarg :buffers
     :accessor access-buffers)
    (%smallest-buffer-size
     :type index
@@ -327,15 +330,19 @@
 (export '(read-smallest-buffer-size largest-buffer-size))
 
 
+(defmethod initialize-instance ((instance fixed-vector-pool)
+                                &key smallest-buffer-size largest-buffer-size
+                                &allow-other-keys)
+  (setf (slot-value instance '%buffers)
+        (make-array (- largest-buffer-size smallest-buffer-size)
+                    :element-type 'list
+                    :initial-element nil)))
+
+
 @export
 (defun make-fixed-vector-pool (smallest-buffer largest-buffer)
   (declare (type index smallest-buffer largest-buffer))
   (make-instance 'fixed-vector-pool
-                 :buffers (let ((buffers (make-array (- largest-buffer smallest-buffer))))
-                            (map-into buffers
-                                      (lambda (x) (declare (ignore x))
-                                        nil)
-                                      buffers))
                  :smallest-buffer-size smallest-buffer
                  :largest-buffer-size largest-buffer))
 
@@ -356,12 +363,17 @@
                    (buffers access-buffers)) replace
     (let ((position (- new-size lower)))
       (unless (aref buffers position)
-        (push (make-array (list new-size))
+        (push (make-buffer replace new-size)
               (aref buffers position)))
       (prog1
           (car (aref buffers position))
         (setf (aref buffers position)
               (cdr (aref buffers position)))))))
+
+
+(defmethod make-buffer ((replacer vector-replacer) size)
+  (declare (type index size))
+  (make-array size))
 
 
 (defmethod get-buffer ((replacer hash-vector-pool) (container vector-container) new-size)
