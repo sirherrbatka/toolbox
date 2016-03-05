@@ -4,10 +4,7 @@
 
 (test group-ordered-test
   (let* ((input #(1 2 3 8 9 11 12))
-         (product (group-ordered-sequence (lambda (last new)
-                                            (= 1
-                                               (abs (- last
-                                                       new))))
+         (product (group-ordered-sequence (lambda (last new) (= 1 (abs (- last new))))
                                           input)))
     (is (= (length product)
            3))

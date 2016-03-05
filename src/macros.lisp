@@ -162,3 +162,66 @@
                                   #'(lambda (x)
                                       (invoke-restart (find-restart 'SB-IMPL::DONT-IMPORT-IT x)))))
              (import symbol ,to-package)))))))
+
+
+@export
+(defmacro macro-with-optional-symbols ((&rest symbols) &body body)
+  `(let ,(mapcar (lambda (x) `(,x (or ,x (gensym))))
+          symbols)
+     ,@body))
+
+
+@eval-always
+(defun ignore-functions (&rest functions)
+  `(declare (ignore ,@(mapcar (lambda (x) `(function ,x))
+                              functions))))
+
+
+@eval-always
+(defun inline-functions (&rest functions)
+  `(declare (inline ,@functions)))
+
+
+@export
+(defmacro with-typed-forms ((&rest forms) &body body)
+  `(symbol-macrolet ,(mapcar (lambda (x) (destructuring-bind (symbol form type) x
+                                           (if (listp form)
+                                               `(,symbol (the ,type ,form))
+                                               `(,symbol ,form))))
+                      forms)
+     ,@body))
+
+
+@export
+(defmacro with-bitmask ((&key index bit-present set-bit mask-size) mask &body body)
+  (macro-with-optional-symbols (index bit-present set-bit)
+    (alexandria:with-gensyms (!typed-mask)
+      (let ((mask-size (or mask-size 32)))
+        `(with-typed-forms ((,!typed-mask ,mask (unsigned-byte ,mask-size)))
+           (labels ((,index (pos) (declare (type (unsigned-byte 8) pos))
+                      (the (unsigned-byte 8)
+                           (logcount (ldb (byte pos 0) ,!typed-mask))))
+                    (,bit-present (pos) (= 1 (ldb (byte 1 pos) ,!typed-mask)))
+                    (,set-bit (pos to) ,(if (numberp mask)
+                                            nil
+                                            `(setf ,mask (dpb to (byte pos 1) ,!typed-mask)))))
+             ,(ignore-functions index bit-present set-bit)
+             ,(inline-functions index bit-present set-bit)
+             ,@body))))))
+
+
+@export
+(defmacro with-bitmasked-vector ((&key container-position access (vector-type t) mask-size) mask vector &body body)
+  (macro-with-optional-symbols (container-position access)
+    (alexandria:with-gensyms (!typed-vector)
+      `(with-typed-forms ((,!typed-vector ,vector (vector ,vector-type)))
+         (with-bitmask (:index ,container-position :mask-size ,mask-size) ,mask
+           (labels ((,access (index) (declare (type (integer 0 ,mask-size) index))
+                      (aref ,!typed-vector (,container-position index)))
+                    ((setf ,access) (value index) (declare (type (integer 0 ,mask-size) index)
+                                                           (type ,vector-type value))
+                      (setf (aref ,vector (,container-position index))
+                            value)))
+             ,(ignore-functions access)
+             ,(inline-functions access)
+             ,@body))))))

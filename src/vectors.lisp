@@ -336,7 +336,8 @@
   (setf (slot-value instance '%buffers)
         (make-array (- largest-buffer-size smallest-buffer-size)
                     :element-type 'list
-                    :initial-element nil)))
+                    :initial-element nil))
+  (call-next-method))
 
 
 @export
