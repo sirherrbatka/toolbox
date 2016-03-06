@@ -193,9 +193,12 @@
 
 
 @export
-(defmacro with-bitmask ((&key index bit-present set-bit mask-size) mask &body body)
+(defmacro with-bitmask ((&key index
+                              bit-present
+                              set-bit
+                              mask-size) mask &body body)
   (macro-with-optional-symbols (index bit-present set-bit)
-    (alexandria:with-gensyms (!typed-mask)
+    (with-gensyms (!typed-mask)
       (let ((mask-size (or mask-size 32)))
         `(with-typed-forms ((,!typed-mask ,mask (unsigned-byte ,mask-size)))
            (labels ((,index (pos) (declare (type (unsigned-byte 8) pos))
@@ -204,24 +207,31 @@
                     (,bit-present (pos) (= 1 (ldb (byte 1 pos) ,!typed-mask)))
                     (,set-bit (pos to) ,(if (numberp mask)
                                             nil
-                                            `(setf ,mask (dpb to (byte pos 1) ,!typed-mask)))))
+                                            `(setf (ldb to (byte pos 1) ,!typed-mask)
+                                                   1))))
              ,(ignore-functions index bit-present set-bit)
              ,(inline-functions index bit-present set-bit)
              ,@body))))))
 
 
 @export
-(defmacro with-bitmasked-vector ((&key container-position access (vector-type t) mask-size) mask vector &body body)
+(defmacro with-bitmasked-vector ((&key container-position
+                                       access
+                                       when-resize-required
+                                       (vector-type t)
+                                       mask-size) mask vector &body body)
   (macro-with-optional-symbols (container-position access)
-    (alexandria:with-gensyms (!typed-vector)
+    (with-gensyms (!typed-vector)
       `(with-typed-forms ((,!typed-vector ,vector (vector ,vector-type)))
          (with-bitmask (:index ,container-position :mask-size ,mask-size) ,mask
            (labels ((,access (index) (declare (type (integer 0 ,mask-size) index))
                       (aref ,!typed-vector (,container-position index)))
                     ((setf ,access) (value index) (declare (type (integer 0 ,mask-size) index)
                                                            (type ,vector-type value))
-                      (setf (aref ,vector (,container-position index))
-                            value)))
+                     (if (< index (array-dimension ,!typed-vector))
+                         (setf (aref ,vector (,container-position index))
+                               value)
+                         ,when-resize-required)))
              ,(ignore-functions access)
              ,(inline-functions access)
              ,@body))))))
