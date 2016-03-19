@@ -16,5 +16,6 @@
                (:file "src/streams")
                (:file "src/algorithms")
                (:file "src/vectors")
+               (:file "src/typed-structs")
                (:file "src/lookuptable")
                (:file "src/functional")))
