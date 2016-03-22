@@ -50,21 +50,27 @@
 
 
 @eval-always
-(defun get-functions (function-prefix variable functions)
-  (mapcar (lambda (x) (destructuring-bind (symbol name lambda-list body) x
-                        (declare (ignore body))
-                        `(,(let* ((symbolic-name (if (listp name)
-                                                     (symbol-name (cadr name))
-                                                     (symbol-name name)))
-                                  (transformed-name (~> (string-upcase symbolic-name)
-                                                        (concatenate 'string (string-upcase function-prefix) _)
-                                                        (intern _))))
-                             (if (listp name)
-                                 (list (car name) transformed-name)
-                                 transformed-name))
-                          ,lambda-list
-                          (,symbol ,variable ,@lambda-list))))
-          functions))
+(defun get-functions (function-prefix variable functions body)
+  (let ((symbols nil))
+    `(labels ,(mapcar (lambda (x) (destructuring-bind (symbol name lambda-list body) x
+                                     (declare (ignore body))
+                                     `(,(let* ((symbolic-name (if (listp name)
+                                                                  (symbol-name (cadr name))
+                                                                  (symbol-name name)))
+                                               (transformed-name (~> (string-upcase symbolic-name)
+                                                                     (concatenate 'string (string-upcase function-prefix) _)
+                                                                     (intern _))))
+                                          (let ((label (if (listp name)
+                                                           (list (car name) transformed-name)
+                                                           transformed-name)))
+                                            (push label symbols)
+                                            label))
+                                       ,lambda-list
+                                       (,symbol ,variable ,@lambda-list))))
+                 functions)
+       (declare (ignore ,@(mapcar (lambda (x) (list 'function x))
+                                  symbols)))
+       ,@body)))
 
 
 @eval-always
@@ -78,8 +84,7 @@
   (with-gensyms (!variable)
     `(let ((,!variable ,captured-variable))
        (declare (type ,name ,!variable))
-       (labels ,(get-functions (or function-prefix "") !variable functions)
-         ,@body))))
+       ,(get-functions (or function-prefix "") !variable functions body))))
 
 
 (defmacro define-with-struct-macro (name functions)
@@ -117,28 +122,25 @@
          (define-with-struct-macro ,struct-name ,gensymed-functions)
          success))))
 
+@eval-always
+(defun get-default-options ()
+  (list '(:conc-name "")))
 
 @eval-always
-(defun get-name-and-options (name options)
-  (cond ((endp options)
-         name)
-        ((null name)
-         (error "Name can't be empty"))
-        ((listp name)
-         (append name options))
-        (t (cons name options))))
+(defun get-name-and-options (name)
+  (cons name (get-default-options)))
 
 
 @export
-(defmacro define-struct-template (template-name options (&rest types) (&rest slots) (&rest functions))
+(defmacro define-struct-template (template-name (&rest types) (&rest slots) (&rest functions))
+  (assert (symbolp template-name))
   (let ((!type-aliases types))
     `(defmacro ,template-name (name ,@types)
        (let ((!types1 (list ,@types))
              (!type-aliases1 ',!type-aliases)
              (!functions1 ',functions)
-             (!slots1 ',slots)
-             (!options1 ',options))
-         `(struct-definition-macro ,(get-name-and-options name !options1)
+             (!slots1 ',slots))
+         `(struct-definition-macro ,(get-name-and-options name)
                                    ,(mapcar 'cons !type-aliases1 !types1)
                                    ,!slots1
                                    ,!functions1)))))

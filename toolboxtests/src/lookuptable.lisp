@@ -80,22 +80,3 @@
         (with-test-lookuptable (lookuptable)
           (iterate (for (index . data) in batch)
                    (is (eq (access index) data))))))))
-
-
-(test lookuptable-signals-error-when-trying-to-access-non-existing-element
-  (let ((factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool)))
-        (container (make-instance 'vector-container)))
-    (with-lookuptable-factory factory
-      (with-fixture lookuptable-init (container 0)
-        (fiveam:signals lookuptable-does-not-contain-item
-          (access-content-of-lookuptable table 0))))))
-
-
-(test lookuptable-creation
-  (let ((factory (make-instance 'fixed-lookuptable-factory :replacer (make-instance 'hash-vector-pool))))
-    (with-lookuptable-factory factory
-      (let ((table (make-lookuptable *lookuptable-factory* '((1 . t) (2 . t) (5 . t)))))
-        (is (eq t (access-content-of-lookuptable table 1)))
-        (is (eq t (access-content-of-lookuptable table 2)))
-        (is (eq t (access-content-of-lookuptable table 5)))
-        (is (= 3 (elements-count table)))))))
