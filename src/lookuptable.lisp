@@ -10,9 +10,8 @@
     :reader read-index)))
 
 
-(defun copy-into-new-content (new-content existing-content old-mask difference) ;;TODO implement
-  (declare (type vector new-content existing-content)
-           (type integer old-mask difference))
+(-> copy-into-new-content (vector vector integer integer) vector)
+(defun copy-into-new-content (new-content existing-content old-mask difference)
   (assert (~> (logcount difference)
               (+ (logcount old-mask) _)
               (= (array-dimension new-content 0)
@@ -21,6 +20,7 @@
              (array-dimension existing-content 0)))
   (assert (zerop (logand old-mask difference)))
   (let ((position 0))
+    (declare (dynamic-extent position))
     (flet ((copy-into (destination)
              (progn (setf (aref new-content destination)
                           (aref existing-content position))
@@ -38,7 +38,8 @@
                        (prog1 (copy-into destination)
                          (incf destination 1)))
                       (t nil))
-            (finish)))))))
+            (finish))))))
+  new-content)
 
 
 @export

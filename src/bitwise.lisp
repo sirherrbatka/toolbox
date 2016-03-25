@@ -2,9 +2,9 @@
 (annot:enable-annot-syntax)
 
 
+(-> map-positive-byte-regions (integer) list)
 @export
 (defun map-positive-byte-regions (value)
-  (declare (type integer value))
   (iterate
     (for i from 0 below (integer-length value))
     (for current-bit = (ldb (byte 1 i) value))
@@ -18,10 +18,9 @@
     (finally (return result))))
 
 
+(-> move-byte-regions (byte-specifer-list integer) integer)
 @export
 (defun move-byte-regions (byte-specifers moved-value)
-  (declare (type integer moved-value)
-           (type byte-specifer-list byte-specifers))
   (let ((length (integer-length moved-value)))
     (reduce (lambda (prev next)
               (let ((starting-region (byte (- length (car next)) 0))

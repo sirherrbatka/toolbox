@@ -32,4 +32,4 @@
 
 
 @export
-(deftype index () `(unsigned-byte 32))
+(deftype index () `(integer 0 ,array-total-size-limit))

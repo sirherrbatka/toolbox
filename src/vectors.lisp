@@ -10,47 +10,39 @@
       (vector-push-extend el product))))
 
 
+(-> choose (vector index &rest index) vector)
 @export
 (defun choose (vector index &rest more-indexes)
   "Returns vector containing values stored in the vector under indexes."
-  (declare (type vector vector)
-           (type index index))
   (map 'vector
        (lambda (i) (aref vector i))
        (cons index more-indexes)))
 
 
+(-> range-sub-vector (vector index index) vector)
 @export
 (defun range-sub-vector (vector start end)
   "Returns array displaced to the vector (starting with start, ending on end)"
-  (declare (type vector vector)
-           (type index start)
-           (type index end))
   (make-array (- end start 1)
               :displaced-to vector
               :displaced-index-offset start))
 
 
+(-> fill-with (vector index index t) vector)
 @export
 (defun fill-with (vector starting count fill-with)
   "Fills region of vector between starting and (+ starting count) with parameter passed with fill-with"
-  (declare (type index count)
-           (type index starting)
-           (type vector vector))
   (iterate
     (with max = (min (+ count starting) (array-dimension vector 0)))
     (for i from starting below max)
     (setf (aref vector i) fill-with))
   vector)
 
-
+(-> left-shift-vector (vector index index t) vector)
 @export
 (defun left-shift-vector (vector starting-with shift fill-with)
   "Shifts elements of the vector from 0 to starting-with by shift towards smaller index. Elements may be removed from the vector,
    if shift would place them under negative index. Fills created gap with fill-with afterwards."
-  (declare (type index shift)
-           (type index starting-with)
-           (type vector vector))
   (iterate
     (for i from 0 below starting-with)
     (setf (aref vector i)
@@ -58,13 +50,12 @@
   (fill-with vector starting-with shift fill-with))
 
 
+(-> right-shift-vector (vector index index t) vector)
 @export
 (defun right-shift-vector (vector starting-with shift fill-with)
   "Shifts elements of the the vector for starting-with by shift toward higher index.
    Elements may be removed from the vector if shift would place them beyond length of the vector. Adjustable vectors are not resized.
    Fills created gap with fill-with afterwards."
-  (declare (type (unsigned-byte 64) starting-with shift)
-           (type vector vector))
   (let ((length (array-dimension vector 0)))
     (iterate
      (for i from (1- length) downto (+ starting-with shift))
@@ -73,6 +64,7 @@
     (fill-with vector starting-with shift fill-with)))
 
 
+(-> shift-vector-elements (vector index index t) vector)
 @export
 (defun shift-vector-elements (vector starting-with shift fill-with)
   "Shifts elements either left or right (depending if shift is positive or negative)."
@@ -81,11 +73,10 @@
       (left-shift-vector vector starting-with (abs shift) fill-with)))
 
 
+(-> vector-insert (t index vector) vector)
 @export
 (defun vector-insert (element index vector)
   "Inserts element in the adjustable vector"
-  (declare (type vector vector)
-           (type (integer 0) index))
   (when (> index (length vector))
     (error "index is to large to fit in the vector"))
   (if (adjustable-array-p vector)
@@ -106,10 +97,10 @@
                           x)))))
 
 
+(-> merge-ordered-vectors ((function (t t) symbol) t &rest vector) vector)
 @export
 (defun merge-ordered-vectors (comparsion-fn desired-size &rest vectors)
   "Merges ordered vectors into new ordered vector (according to the comparsion-fn). Returns new vector"
-  (declare (type (function (t t) symbol) comparsion-fn))
   (assert (every (lambda (x) (is-ordered x comparsion-fn))
                  vectors))
   (iterate main-loop
@@ -157,148 +148,6 @@
 
 
 @export
-(defvar *vector-replacer*)
-
-
-@export
-(defmacro with-vector-replacer (replacer &body body)
-  `(let ((*vector-replacer* ,replacer))
-     (declare (special *vector-replacer*))
-     ,@body))
-
-
-(defgeneric resize-content (vector-container new-size copy-mask)
-  (:documentation "Changes size of the content by taking new buffer from vector-replacer. Copies elements as described in the copy mask (nested list) afterwards.
-                   May return old buffer to the vector-replacer afterwards."))
-
-
-(defgeneric copy-vector-container (vector-container new-size copy-mask))
-
-
-(defgeneric get-buffer (replacer container new-size)
-  (:documentation "Returns vector buffer of lenght = new-size. It may contain garbage."))
-
-
-(defgeneric consume-buffer (replace old-buffer)
-  (:documentation "Passes old-buffer to the replacer so it can be taken care of."))
-
-
-@export
-(defgeneric forget-buffers (replacer size)
-  (:documentation "Removes all avaible buffers of size"))
-
-
-@export
-(defgeneric return-container (container))
-
-
-@export
-(defgeneric make-buffer (replacer size))
-
-
-@export
-(defclass vector-container ()
-  ((%content
-    :type vector
-    :initarg :content
-    :reader read-content))
-  (:documentation "Vector container is a class that acts as wrapper around vector-container
-                   so It can delegate resizing of the vector to the separate object (that can act as a memory pool)"))
-
-
-(defmethod return-container ((container vector-container))
-  (when (slot-boundp container '%content)
-    (let ((buffer (slot-value container '%content)))
-      (slot-makunbound container '%content)
-      (consume-buffer *vector-replacer* buffer)
-      t)))
-
-
-(defmethod copy-vector-container ((container vector-container) new-size copy-mask)
-  (declare (type index new-size)
-           (type vector-copy-list copy-mask))
-  (let ((new-buffer (get-buffer *vector-replacer* container new-size)))
-    (when (slot-boundp container '%content)
-      (iterate
-        (for (to from count) in copy-mask)
-        (copy-with-mask new-buffer
-                        (slot-value container '%content)
-                        (:from from :into to :times count))))
-    (let ((result (make-instance (type-of container) :content new-buffer)))
-      result)))
-
-
-(defmethod print-object ((object vector-container) stream)
-  (format stream "<Vector-Container: ~a>" (if (slot-boundp object '%content)
-                                              (slot-value object '%content)
-                                              (make-array 0))))
-
-
-@export
-(defun content-length (container)
-  (declare (type vector-container container))
-  (if (slot-boundp container '%content)
-      (array-dimension (slot-value container '%content) 0)
-      0))
-
-
-@export
-(defun vector-container= (a b)
-  (declare (type vector-container a b))
-  (vector= (slot-value a '%content)
-           (slot-value b '%content)))
-
-
-@export
-(defun access-content (vector-container index)
-  "Accessor used to read values from vector-container (under index)"
-  (declare (type vector-container vector-container)
-           (type index index))
-  (aref (slot-value vector-container '%content)
-        index))
-
-
-(defun ensure-buffer (container)
-  (declare (type vector-container container))
-  (unless (slot-boundp container '%content)
-    (setf (slot-value container '%content)
-          (get-buffer *vector-replacer* container 1))))
-
-
-@export
-(defun (setf access-content) (new-value
-                              vector-container
-                              index)
-  "Writer for internal buffer"
-  (declare (type vector-container vector-container)
-           (type index index))
-  (ensure-buffer vector-container)
-  (with-vector ((va l v) (slot-value vector-container '%content))
-    (when (>= index l)
-      (resize-content vector-container
-                      (1+ index)
-                      (list  (list 0 0 index)
-                             (list (1+ index) index array-total-size-limit))))
-    (setf (va index) new-value)))
-
-
-@export
-(defun insert-into-content (vector-container new-value index)
-  "First: resize content. Next copy content into new vector."
-  (declare (type vector-container vector-container)
-           (type index index))
-  (let ((was-not-initialized (ensure-buffer vector-container)))
-    (with-vector ((va l v) (slot-value vector-container '%content))
-      (let ((new-size (1+ (max index (if was-not-initialized 0 l)))))
-        (resize-content vector-container
-                        new-size
-                        (list (list 0 0 index)
-                              (list (1+ index) index array-total-size-limit))))
-      (setf (va index) new-value)
-      vector-container)))
-
-
-@export
 (defclass vector-pool (vector-replacer)
   ()
   (:documentation "Fundamental class for all vector pools."))
@@ -340,36 +189,40 @@
   (call-next-method))
 
 
+(-> make-fixed-vector-pool (index index) fixed-vector-pool)
 @export
 (defun make-fixed-vector-pool (smallest-buffer largest-buffer)
-  (declare (type index smallest-buffer largest-buffer))
   (make-instance 'fixed-vector-pool
                  :smallest-buffer-size smallest-buffer
                  :largest-buffer-size largest-buffer))
 
 
-(defrequirement get-buffer ((replace fixed-vector-pool) (container vector-container) new-size)
-  "the new-size is in bounds passed to the fixed-vector-pool"
-  (declare (ignore container))
-  (with-accessors ((lower read-smallest-buffer-size)
-                   (upper read-largest-buffer-size)
-                   (buffers access-buffers)) replace
-    (in-bounds new-size lower upper)))
+@export
+(defgeneric get-buffer-returning-function (replacer))
 
 
-(defmethod get-buffer ((replace fixed-vector-pool) (container vector-container) new-size)
-  (declare (type index new-size))
-  (with-accessors ((lower read-smallest-buffer-size)
-                   (upper read-largest-buffer-size)
-                   (buffers access-buffers)) replace
-    (let ((position (- new-size lower)))
-      (unless (aref buffers position)
-        (push (make-buffer replace new-size)
-              (aref buffers position)))
-      (prog1
-          (car (aref buffers position))
-        (setf (aref buffers position)
-              (cdr (aref buffers position)))))))
+@export
+(defgeneric make-buffer (replacer size))
+
+
+@export
+(defgeneric get-buffer-consuming-function (replacer))
+
+
+(defmethod get-buffer-returning-function ((replace fixed-vector-pool))
+  (lambda (new-size)
+    (declare (type index new-size))
+    (with-accessors ((lower read-smallest-buffer-size)
+                     (upper read-largest-buffer-size)
+                     (buffers access-buffers)) replace
+      (let ((position (- new-size lower)))
+        (unless (aref buffers position)
+          (push (make-buffer replace new-size)
+                (aref buffers position)))
+        (prog1
+            (car (aref buffers position))
+          (setf (aref buffers position)
+                (cdr (aref buffers position))))))))
 
 
 (defmethod make-buffer ((replacer vector-replacer) size)
@@ -377,65 +230,34 @@
   (make-array size))
 
 
-(defmethod get-buffer ((replacer hash-vector-pool) (container vector-container) new-size)
-  (declare (type index new-size))
-  (let ((buffers (gethash new-size (access-buffers replacer))))
-    (unless buffers
-      (push (make-array (list new-size)) buffers))
-    (setf (gethash new-size (access-buffers replacer))
-          (cdr buffers))
-    (car buffers)))
+(defmethod get-buffer-returning-function ((replacer hash-vector-pool))
+  (lambda (new-size)
+    (declare (type index new-size))
+    (let ((buffers (gethash new-size (access-buffers replacer))))
+      (unless buffers
+        (push (make-array (list new-size)) buffers))
+      (setf (gethash new-size (access-buffers replacer))
+            (cdr buffers))
+      (car buffers))))
 
 
-(defmethod consume-buffer ((replace hash-vector-pool) old-buffer)
-  (declare (type vector old-buffer))
-  (let ((size (array-dimension old-buffer 0)))
-    (push old-buffer (gethash size (access-buffers replace)))
-    replace))
+(defmethod get-buffer-consuming-function ((replace hash-vector-pool))
+  (lambda (old-buffer)
+    (declare (type vector old-buffer))
+    (let ((size (array-dimension old-buffer 0)))
+      (push old-buffer (gethash size (access-buffers replace)))
+      replace)))
 
 
-(defguarantee resize-content ((container vector-container) new-size copy-mask)
-  (declare (ignore copy-mask)
-           (type index new-size))
-  (= new-size (length (slot-value container '%content))))
+(defmethod get-buffer-consuming-function ((replace fixed-vector-pool))
+  (lambda (old-buffer)
+    (declare (type vector old-buffer))
+    (let ((size (array-dimension old-buffer 0)))
+      (push old-buffer (aref (access-buffers replace) size))
+      replace)))
 
 
-(defmethod resize-content ((vector-container vector-container) new-size copy-indexes)
-  (let ((new-content (get-buffer *vector-replacer* vector-container new-size)))
-    (when (slot-boundp vector-container '%content)
-      (let ((old-content (slot-value vector-container '%content)))
-        (iterate
-          (for current in copy-indexes)
-          (when current
-            (destructuring-bind (to from count) current
-              (copy-with-mask new-content
-                              (slot-value vector-container '%content)
-                              (:from from :into to :times count)))))
-        (consume-buffer *vector-replacer* old-content)))
-    (setf (slot-value vector-container '%content)
-          new-content)
-    new-content))
-
-
-(defrequirement forget-buffers ((replacer fixed-vector-pool) size)
-  (declare (type index size))
-  (with-accessors ((lower read-smallest-buffer-size)
-                   (upper read-largest-buffer-size)
-                   (buffers access-buffers)) replacer
-    (in-bounds new-size lower upper)))
-
-
-(defmethod forget-buffers ((replacer fixed-vector-pool) size)
-  (declare (type index size))
-  (setf (aref (access-buffers replacer) size)
-        nil))
-
-
-(defguarantee forget-buffers ((replacer fixed-vector-pool) size)
-  (declare (type index size))
-  (null (aref (access-buffers replacer) size)))
-
-
+(-> condition-copy (vector vector function index index) vector)
 @export
 (defun condition-copy (destination source condition-fn destination-start source-start)
   "Universal vector copy function. Will copy elements from source to destination. Process is controled by condition-fn.
@@ -451,28 +273,28 @@
    :move move by positions returned
    :move-copy first move by positions returned, next copy source to destination
    :end finish copying. This function will return."
-  (declare (type vector destination source)
-           (type index destination-start source-start))
-  (block outer
-    (with-vector ((ad ld d) destination)
-      (with-vector ((as ls s) source)
-        (let ((copy nil))
-          (loop while (when (and (< destination-start ld)
-                                 (< source-start ls))
-                        (when copy
-                          (setf (ad destination-start) (as source-start)
-                                copy nil))
-                        (multiple-value-bind (first second operation)
-                            (funcall condition-fn (ad destination-start) (as source-start))
-                          (case operation
-                            (:copy (progn (setf (ad destination-start)
-                                                (as source-start))
-                                          (incf destination-start first)
-                                          (incf source-start second)))
-                            (:move (progn (incf destination-start first)
-                                          (incf source-start second)))
-                            (:move-copy (progn (incf destination-start first)
-                                               (incf source-start second)
-                                               (setf copy t)))
-                            (:end (return-from outer))))))))))
+  (let ((dstart destination-start)
+        (sstart source-start))
+    (block outer
+      (with-vector ((ad ld d) destination)
+        (with-vector ((as ls s) source)
+          (let ((copy nil))
+            (loop while (when (and (< dstart ld)
+                                   (< sstart ls))
+                          (when copy
+                            (setf (ad dstart) (as sstart)
+                                  copy nil))
+                          (multiple-value-bind (first second operation)
+                              (funcall condition-fn (ad dstart) (as sstart))
+                            (case operation
+                              (:copy (progn (setf (ad dstart)
+                                                  (as sstart))
+                                            (incf dstart first)
+                                            (incf sstart second)))
+                              (:move (progn (incf dstart first)
+                                            (incf sstart second)))
+                              (:move-copy (progn (incf dstart first)
+                                                 (incf sstart second)
+                                                 (setf copy t)))
+                              (:end (return-from outer)))))))))))
   destination)
