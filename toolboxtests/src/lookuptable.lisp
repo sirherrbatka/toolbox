@@ -26,7 +26,7 @@
                 (with-test-lookuptable (lookuptable)
                   (insert-into-copy #'fn
                                     (vector (list* index symbol)))))
-          (is (= (with-test-lookuptable (lookuptable) (elements-count)) i)))
+          (is (= (test-lookuptable-elements-count lookuptable) i)))
         (with-test-lookuptable (lookuptable)
           (iterate
             (for (symbol . index) in data)
@@ -79,4 +79,25 @@
         (for batch in data)
         (with-test-lookuptable (lookuptable)
           (iterate (for (index . data) in batch)
-                   (is (eq (access index) data))))))))
+            (is (eq (access index) data))))))))
+
+
+(test typed-lookuptable-remove-test
+  (with-fixture typed-lookuptable ()
+    (let* ((data (iterate
+                   (for i from 0 below 32)
+                   (collect (list* (gensym) i))))
+           (random-data (shuffle data)))
+      (iterate
+        (for i from 1 to 32)
+        (for (symbol . index) in random-data)
+        (setf lookuptable
+              (with-test-lookuptable (lookuptable)
+                (insert-into-copy #'fn
+                                  (vector (list* index symbol))))))
+      (iterate
+        (for i from 1 to 32)
+        (for (symbol . index) in random-data)
+        (setf lookuptable
+              (test-lookuptable-remove-from-copy lookuptable #'fn (vector (list* index symbol))))
+        (is (null (test-lookuptable-contains lookuptable index)))))))

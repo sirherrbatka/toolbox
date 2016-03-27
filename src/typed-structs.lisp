@@ -110,25 +110,30 @@
        ,@body)))
 
 
+@eval-always
+(defun add-function-prefix (struct-name function-name)
+  (assert (symbolp function-name))
+  (~> (concat (symbol-name struct-name) "-" (symbol-name function-name))
+      (string-upcase _)
+      (intern _ *package*)))
+
+
 (defmacro struct-definition-macro (name-and-options types slots functions)
-  (let ((gensymed-functions (mapcar (lambda (x) (cons (gensym) x))
-                                    functions))
-        (struct-name (get-struct-name name-and-options)))
+  (let* ((struct-name (get-struct-name name-and-options))
+         (prefixed-functions (mapcar (lambda (x) (cons (add-function-prefix struct-name (car x)) x))
+                                     functions)))
     `(let ((success (defstruct ,name-and-options
                       ,@(get-struct-data-slots types slots))))
        (when success
          (with-template-macrolets ,struct-name
-             (define-struct-functions ,struct-name ,gensymed-functions))
-         (define-with-struct-macro ,struct-name ,gensymed-functions)
+             (define-struct-functions ,struct-name ,prefixed-functions))
+         (define-with-struct-macro ,struct-name ,prefixed-functions)
          success))))
 
-@eval-always
-(defun get-default-options ()
-  (list '(:conc-name "")))
 
 @eval-always
 (defun get-name-and-options (name)
-  (cons name (get-default-options)))
+  name)
 
 
 @export

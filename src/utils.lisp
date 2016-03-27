@@ -32,55 +32,6 @@
 
 @eval-always
 @export
-(defun find-function-for-symbol (binded-functions symbol)
-  (declare (type list binded-functions)
-           (type symbol symbol))
-  (cdr (assoc symbol binded-functions)))
-
-
-@eval-always
-@export
-(defun transform-alist-enviorment-with-functions (enviorment binded-functions)
-  (iterate
-    (for (symbol . value) in enviorment)
-    (for function = (find-function-for-symbol binded-functions symbol))
-    (when function
-      (push (list* symbol (funcall function value)) enviorment))
-    (finally (return enviorment))))
-
-
-@eval-always
-@export
-(defun build-with-code-generators (code-generators code)
-  (declare (type list code-generators code))
-  (reduce (lambda (prev next) (funcall next prev))
-          code-generators
-          :initial-value code))
-
-
-@eval-always
-@export
-(defun bind-code-generators-with-enviorment (code-generators enviorment)
-  (declare (type list code-generators enviorment))
-  (mapcar (lambda (fn) (funcall fn enviorment))
-          code-generators))
-
-
-@eval-always
-@export
-(defun build-enviorment-transformation (current-stage next-stages &optional accumulate)
-  (if (not next-stages)
-      accumulate
-      (let* ((env (append (car current-stage) accumulate))
-             (transformations (cadar next-stages))
-             (trans-env (transform-alist-enviorment-with-functions env (mapcar (lambda (fn) (funcall fn env)) transformations))))
-        (build-enviorment-transformation (car next-stages)
-                                         (cdr next-stages)
-                                         trans-env))))
-
-
-@eval-always
-@export
 (defun list-is-structured-as (list &rest arguments)
   (let ((current-level-arg (car arguments)))
     (or (and (null list) (null arguments))
