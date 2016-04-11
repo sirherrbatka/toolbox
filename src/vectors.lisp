@@ -142,13 +142,7 @@
 
 
 @export
-(defclass vector-replacer ()
-  ()
-  (:documentation "Fundamental class of vector replacer. Used to represent memory pools holding vector buffers."))
-
-
-@export
-(defclass vector-pool (vector-replacer)
+(defclass vector-pool ()
   ()
   (:documentation "Fundamental class for all vector pools."))
 
@@ -225,7 +219,7 @@
                 (cdr (aref buffers position))))))))
 
 
-(defmethod make-buffer ((replacer vector-replacer) size)
+(defmethod make-buffer ((replacer vector-pool) size)
   (declare (type index size))
   (make-array size))
 
@@ -255,6 +249,19 @@
     (let ((size (array-dimension old-buffer 0)))
       (push old-buffer (aref (access-buffers replace) size))
       replace)))
+
+
+@export
+(defclass typed-vector-pool-mixin ()
+  ((%produce-vector-function
+    :type (-> (index) vector)
+    :reader read-produce-vector-function
+    :initarg :produce-vector-function)))
+
+
+(defmethod make-buffer ((replacer typed-vector-pool-mixin) size)
+  (declare (type index size))
+  (funcall (read-produce-vector-function replacer) size))
 
 
 (-> condition-copy (vector vector function index index) vector)

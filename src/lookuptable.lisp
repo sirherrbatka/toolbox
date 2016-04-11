@@ -92,10 +92,10 @@
                           (make-another-instance :%mask new-mask
                                                  :%content new-content))))
 
-     (remove-from-copy (new-content-fn index-value-pairs)
+     (remove-from-copy (new-content-fn indexes)
                        ((let* ((mask (slot-value instance '%mask))
-                               (new-mask (reduce (lambda (prev next) (dpb 0 (byte 1 (car next)) prev))
-                                                 index-value-pairs
+                               (new-mask (reduce (lambda (prev next) (dpb 0 (byte 1 next) prev))
+                                                 indexes
                                                  :initial-value mask))
                                (difference (logxor mask new-mask))
                                (new-content (funcall new-content-fn (logcount new-mask))))
