@@ -15,7 +15,6 @@ K-tree, NOT balanced right now.
 
 
 (-> get-segment (k-node simple-vector) index)
-@export
 (defun get-segment (node coordinates)
   (with-accessors ((coordinates2 k-node-coordinates)) node
     (assert (= (length coordinates)
