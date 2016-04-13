@@ -18,4 +18,5 @@
                (:file "src/vectors")
                (:file "src/typed-structs")
                (:file "src/lookuptable")
+               (:file "src/trees")
                (:file "src/functional")))
