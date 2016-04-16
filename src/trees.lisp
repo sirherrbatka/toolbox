@@ -140,8 +140,7 @@ Persitant hash table (like in Clojure)
            (next (current next)
              (and (< times 11)
                   (or (not (car next))
-                      (aref (hash-node-%content current)
-                            (cdr next))))))
+                      (hash-node-access current (cdr next))))))
       (descend root #'go-in #'next))))
 
 
